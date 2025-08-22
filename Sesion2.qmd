@@ -1,0 +1,121 @@
+---
+title: "Ejemplo 2"
+format: html
+editor: visual
+---
+
+## Reporte estadístico
+
+Fuente: OEFA
+
+Se realiza el análisis esta´distico descriptivo.
+
+```{r}
+
+library(readr)
+AGUA_RESIDUAL_EFLUENTES_2 <- read_csv("AGUA_RESIDUAL_EFLUENTES_2.csv")
+View(AGUA_RESIDUAL_EFLUENTES_2)
+
+datos <- AGUA_RESIDUAL_EFLUENTES_2
+```
+
+Estructuracion y manipulacion de datos
+
+```{r}
+library(tidyverse)
+
+str(datos)
+```
+
+```{r}
+library(ggplot2)
+
+datos %>% filter(!is.na(OTROS), PARAMETRO == "Demanda Química de Oxígeno (DQO)") %>%
+  filter(OTROS < 1000000) %>% 
+  ggplot(aes(log10(OTROS))) + geom_histogram(color= "black", fill= "grey")+theme_bw()
+
+
+```
+
+```{r}
+
+datos %>% filter(!is.na(OTROS), PARAMETRO == "Demanda Química de Oxígeno (DQO)") %>%
+  filter(OTROS < 1000000) %>% 
+  ggplot(aes(y=log10(OTROS))) + geom_boxplot()+
+  theme_classic()
+```
+
+### Datos Geoespaciales
+
+Importar base de datos
+
+```{r}
+
+data <- rgbif::occ_data(scientificName = "Engraulis ringens",
+                     limit = 1000,
+                country = "PE",
+                basisOfRecord = "HUMAN_OBSERVATION")$data
+```
+
+Estructuracion de datos espaciales
+
+```{r}
+library(tidyverse)
+library(sf)
+
+data_sp = data %>%  select(-dnaSequenceID) %>% 
+  st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), crs = 4326)
+```
+
+```{r}
+library(mapview)
+mapview(data_sp)
+```
+
+Transformar a sistema de coordenadas proyectadas
+
+```{r}
+data_sp_utm <- data_sp %>% st_transform(crs = 32718)
+
+st_crs(data_sp_utm)
+```
+
+Creando un cuadro de fondo
+
+```{r}
+win <- data_sp_utm %>% 
+  st_bbox() %>% st_as_sfc()
+
+mapview(list(data_sp_utm,win))
+```
+
+Estad\[istica geoespacial
+
+```{r}
+library(spatstat)
+
+x = st_coordinates(data_sp_utm)[,1]
+y = st_coordinates(data_sp_utm)[,2]
+box = as.owin(win)
+
+pp1 = ppp(x, y, window = box)
+
+plot(pp1)
+```
+
+Kernel
+
+```{r}
+kernel = density(pp1)
+plot(kernel)
+```
+
+Convertimos en mapa Raster
+
+```{r}
+library(stars)
+
+kernel_stars = kernel %>%  st_as_stars() %>% st_set_crs(32718)
+
+mapview(kernel_stars)
+```
