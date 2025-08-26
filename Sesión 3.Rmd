@@ -1,0 +1,146 @@
+---
+title: "Estadística descriptiva"
+author: "Raúl Lima Coasaca"
+output: html_document
+---
+
+```{r include=FALSE}
+library(tidyverse)
+```
+
+## Caso de estudio
+
+### Problema 1
+
+Usted recolectó muestras de un determinado componente en el efluente de su planta de tratamiento (o en el cuerpo de agua que está estudiando). Estructurar la tabla de distribución de frecuencias y trazar los histogramas de distribución de frecuencias (absoluta y relativa, simple y acumulativa).
+
+Datos:
+
+```{r echo=TRUE}
+datos <- tibble(valores=c(2.8,4.2,3.9,3.3,2.8,1.7,1.9,2.5,3.1,3.8,2.7,4.1,4.3,4.8,5.6,5.8,3.9,3.5,2.7,3.1,2.8,3.4,4.9,2.8,2.8,1.8,2.1,2.6,2.3,2.4,2.5,1.8,2.9,2.4,2.1,3.6))
+```
+
+### Solución
+
+Calculamos las estadísticas descriptivas básicas
+
+```{r}
+datos %>% summarise(promedio= mean(valores), desviación_std = sd(valores), error_std_avg = sd(valores)/sqrt(n()), min= min(valores), máx = max(valores), n = n())
+```
+
+Realizamos las gráficas de distribuciones \#### Histograma
+
+```{r}
+ggplot(datos, aes(valores))+ geom_histogram(color = "black", fill="#CCDDAA", binwidth = 1, boundary = 1)+
+  scale_x_continuous(limits = c(0,6), breaks = 0:6)+
+  labs(x= "Concentración (mg/L)",
+       y = "Frecuencia absoluta",
+       title = "Distribución de frecuencia absoluta")+
+  theme_bw()
+```
+
+```{r}
+ggplot(datos, aes(valores))+geom_histogram(aes(y = after_stat(count / sum(count))), color = "black", fill="#CCDDAA", binwidth = 1, center = 0.5)+
+  scale_x_continuous(limits = c(0,6), breaks = 0:6)+
+  #scale_y_continuous(labels = scales::percent_format()) +
+  labs(x= "Concentración (mg/L)",
+       y = "Frecuencia realtiva",
+       title = "Distribución de frecuencia relativa")+
+  theme_bw()
+```
+
+#### Polígono de frecuencia
+
+```{r}
+ggplot(datos, aes(valores))+
+  #geom_histogram(bins = 6, color = "black", fill="#CCDDAA", binwidth = 1, boundary = 1)+
+  geom_freqpoly(bins = 6, color = "black", binwidth = 1, boundary = 1)+
+  scale_x_continuous(limits = c(0,6))+
+  labs(x= "Concentración (mg/L)",
+       y = "Frecuencia absoluta",
+       title = "Distribución de frecuencia absoluta")+
+  theme_bw()
+```
+
+### Problema 2
+
+En el ejemplo anterior se calculó la distribución de frecuencia y trazó el histograma de frecuencia de los datos. Además trazaste el polígono de frecuencias. Ahora, ajuste una distribución normal a su polígono de frecuencia, trace ambas distribuciones y haga una interpretación visual.
+
+### Solución
+
+Usando rnorm
+
+```{r}
+datos %>% summarise(promedio= mean(valores), desviación = sd(valores))
+
+ajuste <- tibble(p = rnorm(10000, mean= mean(datos$valores), sd = sd(datos$valores)))
+
+ggplot(ajuste, aes(p))+ geom_density()
+```
+
+Usando dnorm
+
+```{r}
+ggplot(data = datos, aes(valores)) +
+  stat_function(fun = dnorm, n = 36, args = list(mean= mean(datos$valores), sd = sd(datos$valores)), color = "purple", size = 1)+
+  geom_freqpoly(aes(y = after_stat(count/sum(count))), bins = 6, color = "black", binwidth = 1, boundary = 1, linetype = 2, size = 1)+
+  scale_x_continuous(limits = c(0,6))+
+  geom_vline(xintercept = 3.15, linetype = 3)+
+  labs(x= "Concentración (mg/L)",
+       y = "Frecuencia realtiva",
+       title = "Distribución de frecuencia relativa")+
+  theme_bw()
+  
+```
+
+Es tu turno, realiza los gráficos Q-Q usando la función stat_qq() + stat_qq_line()
+
+```{r}
+datos %>% ggplot(aes(sample = valores))+ stat_qq() + stat_qq_line()+
+  labs(y= expression("Concentración mg L"^-1),
+       x = "Valor Z")+
+  theme_bw()
+```
+
+#### Prueba de ajuste de normalidad
+
+```{r}
+shapiro.test(datos$valores)
+```
+
+Los datos no se ajustan a un modelo de distribución normal.
+
+## Problema 3
+
+En el primer ejemplo calculó la distribución de frecuencia y trazó el histograma de frecuencia de los datos siguientes. En el segundo ejemplo trazó el polígono de frecuencias y ajustó una distribución normal a sus datos. Ahora, ajuste una distribución logarítmica normal a su polígono de frecuencia, trace ambas distribuciones y haga una interpretación visual.
+
+## Solución
+
+```{r}
+ggplot(data = datos, aes(valores)) +
+  stat_function(fun = dnorm, n = 101, args = list(mean= mean(datos$valores), sd = sd(datos$valores)), color = "blue")+
+  stat_function(fun = dlnorm, n = 101, args = list(mean= mean(log(datos$valores)), sd = sd(log(datos$valores))), color = "red")+
+  geom_freqpoly(aes(y = after_stat(count/sum(count))), bins = 6, color = "black", binwidth = 1, boundary = 1, linetype = 2)+
+  scale_x_continuous(limits = c(0,6))+
+  labs(x= "Concentración (mg/L)",
+       y = "Frecuencia realtiva",
+       title = "Distribución de frecuencia relativa")+
+  theme_bw()
+```
+
+Es tu turno. Realiza los gráficos q-q y el análisis de ajuste de normalidad
+
+```{r}
+datos %>% ggplot(aes(sample = log10(valores)))+stat_qq()+stat_qq_line()
+```
+
+```{r}
+shapiro.test(log10(datos$valores))
+```
+
+Los datos transformados con log10, presentan un buen ajuste para el modelo de distribución normal.
+
+```{r}
+mutate(datos, log = log10(valores)) %>% summarise(logmean = mean(log)) %>% 
+  mutate(geometric_mean = 10^logmean)
+```
