@@ -1,0 +1,131 @@
+---
+title: "Sesión 5"
+author: "UCientifica"
+format: html
+editor: visual
+---
+
+## Caso de estudio 1
+
+Suponga que recopiló datos para dos componentes del agua en un río y desea probar si las dos concentraciones están correlacionadas linealmente. Obtuviste 20 valores pareados del constituyente X y del constituyente Y (n = 20). Calcule el coeficiente de correlación de Pearson r y realice pruebas de hipótesis sobre este coeficiente para determinar si es una correlación significativa.
+
+Importamos los datos
+
+```{r}
+library(readr)
+Ejemplo_1 <- read_delim("C:/Working data/UCIENTIFICA/Estadística aplicada a la ingeniería/Semana 13/Ejemplo 1.txt", 
+    delim = "\t", escape_double = FALSE, 
+    trim_ws = TRUE)
+
+```
+
+Visualizamos los datos
+
+```{r}
+library(tidyverse)
+
+Ejemplo_1 %>% ggplot(aes(X))+geom_histogram(binwidth = 1)
+Ejemplo_1 %>% ggplot(aes(Y))+geom_histogram(binwidth = 1)
+
+
+#Análsis bivariado
+Ejemplo_1 %>% ggplot(aes(X,Y)) + geom_point()
+Ejemplo_1 %>% ggplot(aes(Y,X)) + geom_point()
+```
+
+Análisis de supuestos
+
+```{r}
+#Normalidad
+shapiro.test(Ejemplo_1$X)
+shapiro.test(Ejemplo_1$Y)
+```
+
+Análisis de correlación paramétrica
+
+```{r}
+
+cor.test(Ejemplo_1$Y, Ejemplo_1$X)
+```
+
+Análisis de correlación no paramétrica
+
+```{r}
+
+cor.test(Ejemplo_1$Y, Ejemplo_1$X, method = "spearman")
+```
+
+Análisis de regresión
+
+```{r}
+
+m = lm(Y ~ X , data = Ejemplo_1)
+
+summary(m)
+```
+
+Grafico
+
+```{r}
+library(ggpubr)
+
+Ejemplo_1 %>% ggplot(aes(X,Y)) + geom_point()+ theme_bw()+
+  geom_smooth(method = "lm", se=FALSE, color = "gray40" )+
+  stat_regline_equation()+
+  stat_cor(label.x.npc = "center", method = "spearman")
+
+```
+
+## Caso de estudio 2
+
+Suponga que obtuvo los datos de monitoreo de una laguna facultativa que trata aguas residuales. Obtuvo datos mensuales, que comprenden 24 puntos de datos para cada variable. Entonces decidiste investigar la existencia de posibles correlaciones lineales entre las variables. Para este estudio usted seleccionó las siguientes cuatro variables:
+
+• Concentración de demanda bioquímica de oxígeno (DBO) del efluente (mg/L)
+
+• Tasa de carga en masa (MLR), o tasa de carga orgánica superficial \[(kgBOD/d)/ha\]
+
+• Temperatura del aire (°C)
+
+• Insolación solar \[(kWh/d)/m2\]
+
+```{r}
+library(readr)
+Ejemplo1_pr <- read_delim("C:/Working data/UCIENTIFICA/Estadística aplicada a la ingeniería/Semana 13/Ejemplo1_pr.txt", 
+    delim = "\t", escape_double = FALSE, 
+    trim_ws = TRUE)
+```
+
+```{r}
+ glm()
+```
+
+```{r}
+
+MLM = lm(BOD ~ MLR + `T` + Insolation   ,data = Ejemplo1_pr)
+
+summary(MLM)
+```
+
+## Caso de estudio 3
+
+Algunos datos obtenidos operando un reactor biológico de flujo continuo en condiciones de estado estacionario son:
+
+```{r}
+tabla2 <- tibble(x = c(28,55,83,110,138),
+                 y= c(0.053,0.060,0.112, 0.105,0.099))
+```
+
+Se ha propuesto el modelo Monod para ajustar los datos:
+
+donde yi = tasa de crecimiento (h-1) obtenida a la concentración de sustrato x, θ1 = tasa de crecimiento máxima (h-1) y θ2 = constante de saturación (en unidades de la concentración de sustrato).
+
+```{r}
+plot(tabla2$x,tabla2$y, pch= 18)
+
+```
+
+```{r}
+m3 <- nls(y ~ I(a*x)/I(b+x), data = tabla2, start = list(a = 1, b = 1))
+
+summary(m3)
+```

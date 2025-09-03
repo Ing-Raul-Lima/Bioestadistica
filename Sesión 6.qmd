@@ -1,0 +1,137 @@
+---
+title: "Simulación de Monte Carlo para la Estimación de Captura Anual"
+subtitle: "Caso Aplicado para el Instituto del Mar del Perú (IMARPE)"
+author: "Generado por Gemini"
+date: "today"
+format: 
+  html:
+    toc: true
+    toc-location: left
+    theme: cosmo
+    code-fold: true
+lang: es
+---
+
+## Planteamiento del Problema
+
+IMARPE necesita estimar la captura total de "perico" (*Coryphaena hippurus*) para el próximo año. No conocemos los valores exactos, pero tenemos estimaciones basadas en datos históricos y el monitoreo de la pesquería. Los dos componentes clave de la captura total son inciertos:
+
+1.  **Número de Viajes de Pesca:** Varía cada año debido a condiciones climáticas, vedas y factores socioeconómicos.
+2.  **Captura Promedio por Viaje:** También es variable; algunos viajes son muy exitosos, otros no tanto.
+
+La fórmula básica es:
+
+$$
+\text{Captura Total Anual} = (\text{Número de Viajes}) \times (\text{Captura Promedio por Viaje})
+$$
+
+Usaremos una **simulación de Monte Carlo** para modelar esta incertidumbre. En lugar de obtener un solo número como resultado, generaremos miles de escenarios posibles para obtener una distribución de la captura total anual.
+
+------------------------------------------------------------------------
+
+## 2. Definición de Parámetros
+
+Basándonos en datos históricos hipotéticos, definimos los parámetros de entrada para nuestra simulación. Asumiremos que ambas variables siguen una distribución normal.
+
+```{r}
+#| label: setup 
+#| echo: true 
+#| message: false 
+#| warning: false
+
+# Parámetros para el NÚMERO DE VIAJES ANUALES
+
+media_viajes <- 15000 # Estimamos un promedio de 15,000 viajes al año 
+sd_viajes <- 800 # Con una desviación estándar de 800 viajes
+
+# Parámetros para la CAPTURA PROMEDIO POR VIAJE (en toneladas)
+
+media_captura_viaje <- 2.5 # Estimamos 2.5 toneladas por viaje en promedio
+sd_captura_viaje <- 0.4 # Con una desviación estándar de 0.4 toneladas
+
+# Número de simulaciones a ejecutar
+
+n_simulaciones <- 10000
+
+# Semilla para reproducibilidad
+
+set.seed(42)
+```
+
+#### Simulación de Monte Carlo
+
+```{r}
+#| label: simulation-loop
+#| echo: true
+
+# Creamos un vector vacío para guardar los resultados
+resultados_captura_total <- numeric(n_simulaciones)
+
+# Este bucle es el corazón de la simulación
+for (i in 1:n_simulaciones) {
+  
+  # Generamos valores aleatorios para este escenario
+  viajes_simulados <- rnorm(n = 1, mean = media_viajes, sd = sd_viajes)
+  captura_viaje_simulada <- rnorm(n = 1, mean = media_captura_viaje, sd = sd_captura_viaje)
+  
+  # Aseguramos que los valores no sean negativos
+  viajes_simulados <- max(0, viajes_simulados)
+  captura_viaje_simulada <- max(0, captura_viaje_simulada)
+  
+  # Calculamos y guardamos el resultado de esta iteración
+  resultados_captura_total[i] <- viajes_simulados * captura_viaje_simulada
+}
+
+# Vemos una pequeña muestra de los resultados
+head(resultados_captura_total)
+```
+
+Análisis y visualización
+
+```{r}
+#| label: results-summary
+#| echo: true
+
+# Estimación promedio y mediana
+media_estimada <- mean(resultados_captura_total)
+mediana_estimada <- median(resultados_captura_total)
+
+# Intervalo de Confianza (o Credibilidad) del 95%
+intervalo_confianza_95 <- quantile(resultados_captura_total, probs = c(0.025, 0.975))
+
+# Imprimimos los resultados
+cat("--- Resultados de la Simulación de Monte Carlo ---\n")
+cat("Estimación promedio de la Captura Total:", round(media_estimada), "toneladas\n")
+cat("Intervalo de Confianza del 95% para la Captura Total: [",
+    round(intervalo_confianza_95[1]), " - ",
+    round(intervalo_confianza_95[2]), "] toneladas\n")
+
+
+```
+
+```{r}
+#| label: fig-results-hist
+#| echo: true
+#| fig-cap: "Distribución de la Captura Total Anual Simulada para el recurso 'Perico', basada en 10,000 iteraciones de Monte Carlo. Las líneas marcan la media estimada y el intervalo de confianza del 95%."
+#| fig-align: center
+
+hist(resultados_captura_total / 1000,
+     breaks = 50,
+     main = "Distribución de la Captura Total Anual Simulada (Perico)",
+     xlab = "Captura Total Anual (miles de toneladas)",
+     ylab = "Frecuencia (Nº de simulaciones)",
+     col = "lightblue",
+     border = "white")
+
+# Añadimos líneas verticales para la media y el intervalo de confianza
+abline(v = media_estimada / 1000, col = "red", lwd = 3, lty = 1)
+abline(v = intervalo_confianza_95 / 1000, col = "blue", lwd = 2, lty = 2)
+
+# Añadimos una leyenda
+legend("topright",
+       legend = c("Media Estimada", "Intervalo de Confianza 95%"),
+       col = c("red", "blue"),
+       lwd = c(3, 2),
+       lty = c(1, 2),
+       bty = "n")
+```
